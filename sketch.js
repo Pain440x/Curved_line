@@ -1,6 +1,7 @@
 let linePoints = [];
 linePoints.push(new myPoints())
 linePoints[0].addPoint(5,5);
+linePoints[0].calculateLinePercent(document.getElementById("mySlider").value); 
 // linePoints[0].addPoint(30,400);
 // linePoints[0].addPoint(100,100);
 // linePoints[0].addPoint(300,100);
@@ -29,6 +30,7 @@ function mousePressed() {
   //return false;
 }
 function draw() {
+  linePoints[0].updatePoint();
 
   background(0);
   stroke(255);
@@ -42,9 +44,10 @@ function draw() {
   linePoints[0].drawSegmentPoint();
   linePoints[0].drawCurvedLine();
 
-  stroke(0,255,0);
-  strokeWeight(10);
+  //stroke(0,255,0);
+  //strokeWeight(10);
   //point(4, 100);
-  linePoints[0].drawMyPoints();
 
+  linePoints[0].drawMyPoints();
+  linePoints[0].drawSelectedPoint();
 }

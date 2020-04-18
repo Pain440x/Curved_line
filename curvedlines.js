@@ -38,6 +38,8 @@ class myPoint {
 class myPoints {
   constructor() {
     this.points = [];
+    this.pointsStroke = 'rgb(0,255,0)';
+    this.pointsWeight = 10;
     this.percent = 0.5;
     //this.oldPercent = 0.0;
     this.keepImgBuffData = 0;
@@ -46,6 +48,7 @@ class myPoints {
     this.currentOffset = 0;
     this.selectDistance = 10;
     this.lastCickActionTime = 0;
+    this.selectedPoint = null;
   }
   addPoint(x,y) {
     this.points.push(new myPoint(x,y));
@@ -57,6 +60,13 @@ class myPoints {
       this.clearImgBuffData();
       return true;
     }
+  }
+  validPosition(x,y){
+    if (x < 0) { return;}
+    if (y < 0) { return;}
+    if (x > width) { return;}
+    if (y > height) { return;}
+    return true;
   }
   tryAddPoint(x,y){
     if (x < 0) { return;}
@@ -96,6 +106,30 @@ class myPoints {
     }
     return false;
   }
+  updatePoint(){
+    if (this.selectedPoint == null) {return;}
+    if (!this.validPosition(mouseX, mouseY)) {return;}
+    if ( this.selectedPoint < 0 || this.selectedPoint > this.points.length - 1){return;}
+    let t_point = this.points[this.selectedPoint];
+    if ( t_point.x == mouseX && t_point.y == mouseY) {return;}
+    this.points[this.selectedPoint].x = mouseX;
+    this.points[this.selectedPoint].y = mouseY;
+    this.clearImgBuffData();
+  }
+  movePoint(){
+    if ( quickClick(300, this.lastCickActionTime) ) {return;}
+    if ( !this.validPosition(mouseX, mouseY)) {return;}
+    if ( this.selectedPoint != null) {
+      this.points[this.selectedPoint].x = mouseX;
+      this.points[this.selectedPoint].y = mouseY;
+      this.selectedPoint = null;}
+    else {
+      this.selectedPoint = this.getSelectedPoint();
+      if ( this.selectedPoint == null ) {return;}
+    }
+    this.clearImgBuffData();
+    this.lastCickActionTime = new Date().getTime();
+  }
   mouseEvent(){
     let action = getCurrentAction();
     if (action == "add") {
@@ -105,6 +139,8 @@ class myPoints {
       }
     } else if (action == "remove") {
       this.tryRemoveSelectedPoint();
+    } else if (action == "move") {
+      this.movePoint();
     }
 
   }
@@ -136,9 +172,19 @@ class myPoints {
     if (startP < 0) {startP = 0;}
     if (startP > this.points.length - 1) {return;}
     if (endP < 0 || endP > this.points.length - 1) {endP = this.points.length -1;}
+    stroke(this.pointsStroke);
+    strokeWeight(this.pointsWeight);
     for (let i = startP; i <= endP; i++) {
       point(this.points[i].x , this.points[i].y);
     }
+  }
+  drawSelectedPoint(R = 255, G = 0, B = 0, size = 15) {
+    if ( this.selectedPoint == null) {return;}
+    if ( this.selectedPoint < 0 || this.selectedPoint > this.points.length - 1){return;}
+    stroke(R,G,B);
+    strokeWeight(size);
+    point(this.points[this.selectedPoint].x, this.points[this.selectedPoint].y);
+    this.drawMyPoints(this.selectedPoint,this.selectedPoint);
   }
   drawSegmentPoint(startP = 0,endP = -1) {
     if (startP < 0) {startP = 0;}

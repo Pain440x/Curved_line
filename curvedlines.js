@@ -1,3 +1,4 @@
+//So far so good!
 function getCurrentAction() {
   let action
   if (document.getElementById("add").checked) {
@@ -18,7 +19,6 @@ function quickClick(timeGap = 0, lastTime = 0) {
   }
   return false;
 }
-
 function getSegmentPoint(p1,p2,percent) {
   tempX = p1.x - p2.x;
   tempY = p1.y - p2.y;
@@ -26,9 +26,11 @@ function getSegmentPoint(p1,p2,percent) {
   newP.x = p1.x - (tempX * percent);
   newP.y = p1.y - (tempY * percent);
   return newP;
-
 }
-
+function displayText( text2 ) {
+  //Easiest way to debug on cell phone.
+  document.getElementById('par').innerHTML = text2;
+}
 class myPoint {
   constructor(x,y) {
     this.x = x;
@@ -43,12 +45,14 @@ class myPoints {
     this.percent = 0.5;
     //this.oldPercent = 0.0;
     this.keepImgBuffData = 0;
-    this.loopStepping = 30;
+    this.loopStepping = 60;
     this.steppingPrecision = 10000;
     this.currentOffset = 0;
-    this.selectDistance = 10;
+    this.selectDistance = 30;
     this.lastCickActionTime = 0;
     this.selectedPoint = null;
+    this.toFollowCursor = false;
+
   }
   addPoint(x,y) {
     this.points.push(new myPoint(x,y));
@@ -83,7 +87,7 @@ class myPoints {
     if (y > height) { y = height;}
     this.addPoint(x,y);
   }
-  getSelectedPoint(){
+  getSelectedPointIndex(){
     let tempPIndex = null;
     let distance = Infinity;
     for (let i = 0; i < this.points.length; i++) {
@@ -98,37 +102,62 @@ class myPoints {
     }
     return tempPIndex;
   }
+  isValidSelectedPoint() {
+    if ( this.selectedPoint < 0 || this.selectedPoint > this.points.length - 1){return false;}
+    return true;
+  }
+  cursorCloseToSelectedPoint(){
+    if (this.toFollowCursor) {return false;}
+    let tempPoint = this.points[this.selectedPoint];
+    let distSq = Math.pow(tempPoint.x - Math.round(mouseX), 2) +
+      Math.pow(tempPoint.y - Math.round(mouseY), 2);
+    if (distSq < Math.pow(this.selectDistance + 2, 2)) {return true;}
+    this.toFollowCursor = true;
+    return false;
+  }
   tryRemoveSelectedPoint() {
-    let tempPIndex = this.getSelectedPoint();
+    let tempPIndex = this.getSelectedPointIndex();
     if (tempPIndex != null) {
       return this.removePoint(tempPIndex);
-      //this.points.splice(tempPIndex, 1);
     }
     return false;
   }
-  updatePoint(){
+  updateSelectedPoint(){
     if (this.selectedPoint == null) {return;}
+    //displayText( "here");
+    //if ( quickClick(500, this.lastCickActionTime)) {return;}
     if (!this.validPosition(mouseX, mouseY)) {return;}
     if ( this.selectedPoint < 0 || this.selectedPoint > this.points.length - 1){return;}
+    if (this.cursorCloseToSelectedPoint()) {return;}
     let t_point = this.points[this.selectedPoint];
-    if ( t_point.x == mouseX && t_point.y == mouseY) {return;}
-    this.points[this.selectedPoint].x = mouseX;
-    this.points[this.selectedPoint].y = mouseY;
+    if ( t_point.x == Math.round(mouseX) && t_point.y == Math.round(mouseY)) {return;}
+    this.points[this.selectedPoint].x = Math.round(mouseX);
+    this.points[this.selectedPoint].y = Math.round(mouseY);
     this.clearImgBuffData();
   }
   movePoint(){
-    if ( quickClick(300, this.lastCickActionTime) ) {return;}
+    if ( quickClick(400, this.lastCickActionTime) ) {return;}
     if ( !this.validPosition(mouseX, mouseY)) {return;}
     if ( this.selectedPoint != null) {
       this.points[this.selectedPoint].x = mouseX;
       this.points[this.selectedPoint].y = mouseY;
       this.selectedPoint = null;}
     else {
-      this.selectedPoint = this.getSelectedPoint();
+      this.selectedPoint = this.getSelectedPointIndex();
       if ( this.selectedPoint == null ) {return;}
     }
+    this.toFollowCursor = false;
     this.clearImgBuffData();
     this.lastCickActionTime = new Date().getTime();
+  }
+  touchReleased(){
+    // Deselects a point that was dragged by a touch screen.
+    if (this.selectedPoint == null) {return;}
+    if ( !quickClick(400,this.lastCickActionTime)) {
+      this.lastCickActionTime = new Date().getTime();
+      this.clearImgBuffData();
+      this.selectedPoint = null;
+    }
   }
   mouseEvent(){
     let action = getCurrentAction();
@@ -145,11 +174,10 @@ class myPoints {
 
   }
   clearImgBuffData(){
-    if ( this.img) {
+    if ( this.img && this.currentOffset) {
       this.img.clear();
     }
     this.currentOffset = 0;
-    this.keepImgBuffData = true;
   }
   setLinePercent(value = 0.5){
     this.percent = value;
@@ -178,7 +206,7 @@ class myPoints {
       point(this.points[i].x , this.points[i].y);
     }
   }
-  drawSelectedPoint(R = 255, G = 0, B = 0, size = 15) {
+  drawSelectedPoint(R = 255, G = 255, B = 0, size = 15) {
     if ( this.selectedPoint == null) {return;}
     if ( this.selectedPoint < 0 || this.selectedPoint > this.points.length - 1){return;}
     stroke(R,G,B);
@@ -190,7 +218,6 @@ class myPoints {
     if (startP < 0) {startP = 0;}
     if (startP >= this.points.length - 1) {return;}
     if (endP < 0 || endP > this.points.length - 1) {endP = this.points.length -1;}
-
     for (let i = startP;  i < endP; i++) {
       //point(40,400);
       let tempPoint = getSegmentPoint(this.points[i],this.points[i+1],
@@ -223,55 +250,25 @@ class myPoints {
     if (this.currentOffset >= this.loopStepping) {
       return;
     }
+    //this.img.background(255,255,255);
+    this.img.stroke(255,0,220);
+    this.img.strokeWeight(10);
     if (this.steppingPrecision < 1) {this.steppingPrecision = 1;}
     for (let i = this.currentOffset;
       i < this.percent * this.steppingPrecision;
       i += this.loopStepping) {
       let tempP = this.getFinalSegmentPoint(i / this.steppingPrecision);
-      //this.img.background(255,255,255);
-      this.img.stroke(255,0,220);
-      this.img.strokeWeight(10);
       if( tempP ) {
          //oldtempP = tempP;
          this.img.point(tempP.x,tempP.y);
        }
-       // stroke(255,0,220);
-       // strokeWeight(10);
-       // if( tempP ) {
-       //    //oldtempP = tempP;
-       //    point(tempP.x,tempP.y);
-       //  }
     }
     this.currentOffset ++;
   }
   drawCurvedLine() {
     if (this.points.length < 2) {return;}
-    if (!this.img) {
-      //stroke(255,0,0);
-      //strokeWeight(50);
-      //point(50,50);
-      this.img = createGraphics(width, height);
-    }
-    if (this.keepImgBuffData != true ) {
-      // this.img.clear();
-      // this.currentOffset = 0;
-      // this.keepImgBuffData = true;
-    }
+    if (!this.img) {this.img = createGraphics(width, height);}
     this.curvedlineDrawingLoop();
-    // //let oldtempP = new myPoint(0,0);
-    // for (let i = 0; i < this.percent * 10000; i += 5) {
-    //   let tempP = this.getFinalSegmentPoint(i * 0.0001);
-    //   //this.img.background(255,255,255);
-    //   this.img.stroke(255,0,220);
-    //   this.img.strokeWeight(10);
-    //   if( tempP ) {
-    //      //oldtempP = tempP;
-    //      this.img.point(tempP.x,tempP.y);
-    //    }
-    //     //point(tempP.x, tempP.y);
-    //     //this.img.point(oldtempP.x, oldtempP.y);
-    // }
     image(this.img, 0, 0, 800, 800);//is.img.width, this.img.width);
-    //point(50,50);
   }
 }
